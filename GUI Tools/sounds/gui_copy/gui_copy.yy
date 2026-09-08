@@ -1,0 +1,26 @@
+{
+  "$GMSound":"v2",
+  "%Name":"gui_copy",
+  "audioGroupId":{
+    "name":"audiogroup_default",
+    "path":"audiogroups/audiogroup_default",
+  },
+  "bitDepth":1,
+  "channelFormat":1,
+  "compression":0,
+  "compressionQuality":4,
+  "conversionMode":0,
+  "duration":0.78367347,
+  "exportDir":"",
+  "name":"gui_copy",
+  "parent":{
+    "name":"GUI Tools",
+    "path":"folders/GUI Tools.yy",
+  },
+  "preload":false,
+  "resourceType":"GMSound",
+  "resourceVersion":"2.0",
+  "sampleRate":44100,
+  "soundFile":"gui_copy.mp3",
+  "volume":1.0,
+}

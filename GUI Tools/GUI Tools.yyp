@@ -1,0 +1,43 @@
+{
+  "$GMProject":"v1",
+  "%Name":"GUI Tools",
+  "AudioGroups":[
+    {"$GMAudioGroup":"v1","%Name":"audiogroup_default","exportDir":"","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
+  ],
+  "configs":{
+    "children":[],
+    "name":"Default",
+  },
+  "defaultScriptType":0,
+  "Folders":[
+    {"$GMFolder":"","%Name":"GUI Tools","folderPath":"folders/GUI Tools.yy","name":"GUI Tools","resourceType":"GMFolder","resourceVersion":"2.0",},
+  ],
+  "ForcedPrefabProjectReferences":[
+    {"link":"io.gamemaker.sdfshaders-1.0.0","name":"io.gamemaker.sdfshaders-1.0.0","path":"io.gamemaker.sdfshaders-1.0.0.yyp",},
+  ],
+  "IncludedFiles":[],
+  "isEcma":false,
+  "LibraryEmitters":[],
+  "MetaData":{
+    "IDEVersion":"2026.0.0.16",
+  },
+  "name":"GUI Tools",
+  "resources":[
+    {"id":{"name":"Roboto","path":"fonts/Roboto/Roboto.yy",},},
+    {"id":{"name":"gui_creator","path":"objects/gui_creator/gui_creator.yy",},},
+    {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
+    {"id":{"name":"functions","path":"scripts/functions/functions.yy",},},
+    {"id":{"name":"gui_copy","path":"sounds/gui_copy/gui_copy.yy",},},
+    {"id":{"name":"gui_create","path":"sounds/gui_create/gui_create.yy",},},
+    {"id":{"name":"gui_delete","path":"sounds/gui_delete/gui_delete.yy",},},
+  ],
+  "resourceType":"GMProject",
+  "resourceVersion":"2.0",
+  "RoomOrderNodes":[
+    {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
+  ],
+  "templateType":"game",
+  "TextureGroups":[
+    {"$GMTextureGroup":"","%Name":"Default","autocrop":true,"border":2,"compressFormat":"bz2","customOptions":"","directory":"","groupParent":null,"isScaled":true,"loadType":"default","mipsToGenerate":0,"name":"Default","resourceType":"GMTextureGroup","resourceVersion":"2.0","targets":-1,},
+  ],
+}
