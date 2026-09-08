@@ -1,7 +1,7 @@
 
 # Gamemaker GUI Creator
 
-This is a Work In Progress In-game GUI creator for Gamemaker. The main goal is that you'll import a yyp to your game and you can design your GUI-s while in-game, so you wont't have to guess your dimesions, placements
+This is a Work In Progress In-game GUI creator for Gamemaker. The main goal is that you'll import a yymps to your game and you can design your GUI-s while in-game, so you wont't have to guess your dimesions, placements
 
 ## Features
 
@@ -13,6 +13,6 @@ This is a Work In Progress In-game GUI creator for Gamemaker. The main goal is t
 
 ## Installation
 
-From the releases tab, download the .yyp file and import to your project
+From the releases tab, download the .yymps file and import to your project using the project tool
 
     
