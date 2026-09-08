@@ -35,9 +35,21 @@ function isInBoxWorld(xPos,yPos,x2Pos,y2Pos)
 /// @description   This function gets called when using the realtime editor
 function RTRectangle(x1,y1,x2,y2,outline)
 {
-	draw_rectangle_colour(x1+5,y1+5,x2+5,y1+5,c_green,c_green,c_green,c_green,true)
 	draw_rectangle(x1,y1,x2,y2,outline)
 }
+
+/// @function                 RTCircle;
+/// @param {real}  x1 Top left horizontal corner of the area
+/// @param {real}  y1 Top left vertical corner of the area
+/// @param {real}  x2 Bottom right horizontal corner of the area
+/// @param {real}  y2 Bottom right vertical corner of the area
+/// @description   This function gets called when using the realtime editor
+function RTCircle(x1,y1,r,outline)
+{
+	draw_circle(x1,y1,r,outline)
+}
+
+
 /// @function                 GUISlider;
 /// @param {real}  _x1 Top left horizontal corner of the area
 /// @param {real}  _y1 Top left vertical corner of the area
@@ -391,111 +403,24 @@ function RectanglesInteract(_rect)
 
 
 
-function SpheresInteract(_rect)
+function SpheresInteract(_data)
 {
 	var handled = false;
 	static pad = 2;
 	static bsize = 25;
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
-	_rect._color = make_color_rgb(_rect.red,_rect.green,_rect.blue);
-	var red_slider_x1 = _rect.cont_x + pad;
-	var red_slider_x2 = _rect.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _rect.red / 255);
-	var green_slider_x1 = _rect.cont_x + pad;
-	var green_slider_x2 = _rect.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _rect.green / 255);
-	var blue_slider_x1 = _rect.cont_x + pad;
-	var blue_slider_x2 = _rect.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _rect.blue  / 255);
-	
-	if (isInBox(_rect.x1 - 5, _rect.y1 - 5, _rect.x2 + 5, _rect.y1 + 5))//top
-        {
-			if (mouse_check_button_pressed(mb_left)) {_rect.drag = 1;}
-			window_set_cursor(cr_size_ns);
-			handled = true;
-        }
-        else if (isInBox(_rect.x1 - 5, _rect.y2 - 5, _rect.x2 + 5, _rect.y2 + 5))//bottom
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 2;}
-			window_set_cursor(cr_size_ns);
-			handled = true;
-        }
-        else if (isInBox(_rect.x1 - 5, _rect.y1, _rect.x1 + 5, _rect.y2))//left
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 3;}
-			window_set_cursor(cr_size_we);
-			handled = true;
-        }
-        else if (isInBox(_rect.x2 - 5, _rect.y1, _rect.x2 + 5, _rect.y2))//right
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 4;}
-            window_set_cursor(cr_size_we);
-			handled = true;
-        }
-		else if (isInBox(_rect.x1, _rect.y1, _rect.x2, _rect.y2))
-		{
-		    if (mouse_check_button_pressed(mb_left))
-		    {
-				if (_rect.context_open == false)
-				{
-		        _rect.drag = 5;
-				_rect.last_mx = mx;
-				_rect.last_my = my;
-				handled = true;
-				}
-		    }
-			window_set_cursor(cr_size_all);
-		}
-    if (mouse_check_button(mb_left))
-    {
-        switch (_rect.drag)
-        {
-            case 1:
-                _rect.y1 = my
-            break;
+	_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
+	var red_slider_x1 = _data.cont_x + pad;
+	var red_slider_x2 = _data.cont_x + 100 - pad;
+	var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
+	var green_slider_x1 = _data.cont_x + pad;
+	var green_slider_x2 = _data.cont_x + 100 - pad;
+	var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
+	var blue_slider_x1 = _data.cont_x + pad;
+	var blue_slider_x2 = _data.cont_x + 100 - pad;
+	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
 
-            case 2:
-                _rect.y2 = my;
-            break;
-
-            case 3:
-                _rect.x1 = mx;
-            break;
-
-            case 4:
-                _rect.x2 = mx;
-            break;
-			case 5:
-				if (_rect.context_open == true && handled == false){_rect.context_open = false}
-	            var dx = mx - _rect.last_mx;
-	            var dy = my - _rect.last_my;
-
-	            _rect.x1 += dx;
-	            _rect.x2 += dx;
-	            _rect.y1 += dy;
-	            _rect.y2 += dy;
-
-	            _rect.last_mx = mx;
-	            _rect.last_my = my;
-			break;
-        }
-    }
-    else
-    {
-        _rect.drag = 0;
-        window_set_cursor(cr_default);
-    }
-
-	if (isInBox(_rect.x1, _rect.y1, _rect.x2, _rect.y2))
-	{
-		if (mouse_check_button_pressed(mb_right))
-		{
-		_rect.cont_x = window_mouse_get_x()
-		_rect.cont_y = window_mouse_get_y()
-		_rect.context_open = !_rect.context_open
-		}
-	}	
 	if (_rect.context_open == true)
 	{
 		handled = true;
@@ -530,36 +455,36 @@ function SpheresInteract(_rect)
 
 
 
-function SpheresDraw(_rect)
+function SpheresDraw(_data)
 {
 	static pad = 2;
 	static bsize = 25;
-	_rect._color = make_color_rgb(_rect.red,_rect.green,_rect.blue);
-	var red_slider_x1 = _rect.cont_x + pad;
-	var red_slider_x2 = _rect.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _rect.red / 255);
-	var green_slider_x1 = _rect.cont_x + pad;
-	var green_slider_x2 = _rect.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _rect.green / 255);
-	var blue_slider_x1 = _rect.cont_x + pad;
-	var blue_slider_x2 = _rect.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _rect.blue  / 255);
-    draw_set_colour(_rect._color);
-	RTRectangle(_rect.x1,_rect.y1,_rect.x2,_rect.y2,false);
+	_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
+	var red_slider_x1 = _data.cont_x + pad;
+	var red_slider_x2 = _data.cont_x + 100 - pad;
+	var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
+	var green_slider_x1 = _data.cont_x + pad;
+	var green_slider_x2 = _data.cont_x + 100 - pad;
+	var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
+	var blue_slider_x1 = _data.cont_x + pad;
+	var blue_slider_x2 = _data.cont_x + 100 - pad;
+	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
+    draw_set_colour(_data._color);
+	RTCircle(_data.x1,_data.y1,_data.r,false)
 	
-	if (_rect.context_open == true)
+	if (_data.context_open == true)
 		{
 		draw_set_alpha(0.5)
-		draw_rectangle_colour(_rect.cont_x,_rect.cont_y,_rect.cont_x+100,_rect.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad,_rect.cont_x+100-pad,_rect.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+bsize,_rect.cont_x+100-pad,_rect.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*2),_rect.cont_x+100-pad,_rect.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),_rect.cont_x+100-pad,_rect.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),_rect.cont_x+100-pad,_rect.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),_rect.cont_x+100-pad,_rect.cont_y+(bsize*6),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x,_data.cont_y,_data.cont_x+100,_data.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad,_data.cont_x+100-pad,_data.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,_data.cont_x+100-pad,_data.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),_data.cont_x+100-pad,_data.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),_data.cont_x+100-pad,_data.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),_data.cont_x+100-pad,_data.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),_data.cont_x+100-pad,_data.cont_y+(bsize*6),c_gray,c_gray,c_gray,c_gray,false);
 		draw_set_alpha(1)
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),red_x2,_rect.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),green_x2,_rect.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),blue_x2,_rect.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),red_x2,_data.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),green_x2,_data.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),blue_x2,_data.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
 		}
 }
