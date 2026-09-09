@@ -3,12 +3,14 @@
 
 This is a Work In Progress In-game GUI creator for Gamemaker. The main goal is that you'll import a yymps to your game and you can design your GUI-s while in-game, so you wont't have to guess your dimesions, placements
 
-## Features
+## Features/planned features
 
 - Rectangle Creator ✅
 - Circle creator ✅
 - Sprite Placer (WIP)
-- A loads of things that I don't remember anymore ❓
+- Dynamic positions for all resolutions(future)
+- Maybe a whole GUI system with sliders buttons etc
+- More refined interface(once everything works intended)
 
 
 ## Installation
