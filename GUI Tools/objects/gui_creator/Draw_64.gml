@@ -35,12 +35,45 @@ if isInBox(12,6,200,51)
 }
 draw_set_alpha(1)
 
+if isInBox(212,6,400,51)
+{
+	draw_rectangle_colour(212,6,400,51,c_white,c_white,c_white,c_white,false)
+	if mouse_check_button_pressed(mb_left)
+	{
+			var data = {
+			    x1: 10,
+			    y1: 10,
+				r: 5,
+			    _color: c_white,
+			    drag: 0,
+				last_mx: 0,
+				last_my: 0,
+				context_open: false,
+				cont_x: 0,
+				cont_y: 0,
+				red: 255,
+				green: 255,
+				blue: 255,
+				delete_me: false
+			};
+			audio_play_sound(gui_create,0,0)
+			array_push(circles, data);
+	}
+}
+
 
 if (rectangles != 0)
 {
 	for (var i = 0; i < array_length(rectangles); i++)
 	{
 	    RectanglesDraw(rectangles[i])
+	}
+}
+if (circles != 0)
+{
+	for (var i = 0; i < array_length(circles); i++)
+	{
+	    CirclesDraw(circles[i])
 	}
 }
 }

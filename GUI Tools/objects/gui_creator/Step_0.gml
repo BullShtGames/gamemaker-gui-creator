@@ -2,7 +2,7 @@ if (guimode == true)
 {
 var mouse_handled = false;
 
-if (rectangles != 0)
+if ((rectangles != 0) || (circles != 0))
 {
 	for (var i = array_length(rectangles) - 1; i >= 0; i--)
 	{
@@ -15,5 +15,18 @@ if (rectangles != 0)
         array_delete(rectangles, i, 1);
     }
 	}
+	
+	for (var i = array_length(circles) - 1; i >= 0; i--)
+	{
+	    if (!mouse_handled)
+	    {
+	        mouse_handled = CirclesInteract(circles[i]);
+	    }
+    if (circles[i].delete_me)
+    {
+        array_delete(circles, i, 1);
+    }
+	}
+	
 }
 }

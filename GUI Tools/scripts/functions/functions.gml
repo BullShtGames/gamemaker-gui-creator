@@ -12,6 +12,21 @@ if (window_mouse_get_x() > xPos && window_mouse_get_y() > yPos && window_mouse_g
 }
 }
 
+/// @function isInCircle
+/// @param {real} xPos Horizontal position of the circle center
+/// @param {real} yPos Vertical position of the circle center
+/// @param {real} radius Radius of the circle
+/// @description GUI USE ONLY: Checks if the mouse is inside the given circle
+function isInCircle(xPos, yPos, radius)
+{
+var mx = device_mouse_x_to_gui(0);
+var my = device_mouse_y_to_gui(0);
+
+return point_distance(mx, my, xPos, yPos) <= radius;
+
+}
+
+
 /// @function                 isInBoxWorld;
 /// @param {real}  xPos Top left horizontal corner of the area
 /// @param {real}  yPos Top left vertical corner of the area
@@ -403,7 +418,7 @@ function RectanglesInteract(_rect)
 
 
 
-function SpheresInteract(_data)
+function CirclesInteract(_data)
 {
 	var handled = false;
 	static pad = 2;
@@ -420,34 +435,119 @@ function SpheresInteract(_data)
 	var blue_slider_x1 = _data.cont_x + pad;
 	var blue_slider_x2 = _data.cont_x + 100 - pad;
 	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
-
-	if (_rect.context_open == true)
+	
+	if (mouse_check_button_pressed(mb_left))
 	{
-		handled = true;
-			//copy
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad,_rect.cont_x+100-pad,_rect.cont_y+bsize))
+	    var mouse_dist = point_distance(
+	        mx,
+	        my,
+	        _data.x1,
+	        _data.y1
+	    );
+
+	    if (mouse_dist >= _data.r - 6 && mouse_dist <= _data.r + 6)
+	    {
+	        _data.drag = 1;
+	        handled = true;
+	    }
+    
+	    else if (isInCircle(_data.x1, _data.y1, _data.r))
+	    {
+	        _data.drag = 2;
+
+	        _data.last_mx = mx;
+	        _data.last_my = my;
+
+	        handled = true;
+	    }
+	}
+
+	if (_data.drag == 1)
+	{
+	    if (mouse_check_button(mb_left))
+	    {
+	        _data.r = point_distance(
+	            mx,
+	            my,
+	            _data.x1,
+	            _data.y1
+	        );
+
+	        _data.r = max(_data.r, 5);
+
+	        handled = true;
+	    }
+	    else
+	    {
+	        _data.drag = 0;
+	    }
+	}
+	
+	else if (_data.drag == 2)
+	{
+	    if (mouse_check_button(mb_left))
+	    {
+	        var dx = mx - _data.last_mx;
+	        var dy = my - _data.last_my;
+
+	        _data.x1 += dx;
+	        _data.y1 += dy;
+
+	        _data.last_mx = mx;
+	        _data.last_my = my;
+
+	        handled = true;
+	    }
+	    else
+	    {
+	        _data.drag = 0;
+	    }
+	}
+	
+	if (isInCircle(_data.x1,_data.y1,_data.r))
+	{
+		if (mouse_check_button_pressed(mb_right))
+		{
+		_data.cont_x = window_mouse_get_x()
+		_data.cont_y = window_mouse_get_y()
+		_data.context_open = !_data.context_open
+		}
+	}	
+	
+
+	if (_data.context_open == true)
+	{
+		//copy
+		if (isInBox(_data.cont_x+pad,_data.cont_y+pad,_data.cont_x+100-pad,_data.cont_y+bsize))
 		{
 			if mouse_check_button_pressed(mb_left)
 			{
-				clipboard_set_text(string(_rect.x1)+","+string(_rect.y1)+","+string(_rect.x2)+","+string(_rect.y2));
+				clipboard_set_text(string(_data.x1)+","+string(_data.y1)+","+string(_data.r));
 				audio_play_sound(gui_copy,0,0);
-				handled = true;
+			}
+		}
+		//copy code
+		if (isInBox(_data.cont_x+pad,_data.cont_y+pad+bsize,_data.cont_x+100-pad,_data.cont_y+(bsize*2)))
+		{
+			if mouse_check_button_pressed(mb_left)
+			{
+				clipboard_set_text("draw_circle("+string(_data.x1)+","+string(_data.y1)+","+string(_data.r)+",false)")
+				audio_play_sound(gui_copy,0,0);
 			}
 		}
 		//delete
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad+bsize,_rect.cont_x+100-pad,_rect.cont_y+(bsize*2)))
+		if (isInBox(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),_data.cont_x+100-pad,_data.cont_y+(bsize*3)))
 		{
 			if mouse_check_button_pressed(mb_left)
 			{
-				_rect.delete_me = true;
+				_data.delete_me = true;
 				audio_play_sound(gui_delete,0,0);
-				handled = true;
 			}
 		}
 		//RGB
-		_rect.blue = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),_rect.cont_x+100-pad,_rect.cont_y+(bsize*5),_rect.blue);
-		_rect.green = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),_rect.cont_x+100-pad,_rect.cont_y+(bsize*4),_rect.green);
-		_rect.red = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*2),_rect.cont_x+100-pad,_rect.cont_y+(bsize*3),_rect.red);
+		_data.blue = GUISlider(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),_data.cont_x+100-pad,_data.cont_y+(bsize*6),_data.blue);
+		_data.green = GUISlider(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),_data.cont_x+100-pad,_data.cont_y+(bsize*5),_data.green);
+		_data.red = GUISlider(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),_data.cont_x+100-pad,_data.cont_y+(bsize*4),_data.red);
 	}
 	return handled;
 }
@@ -455,7 +555,7 @@ function SpheresInteract(_data)
 
 
 
-function SpheresDraw(_data)
+function CirclesDraw(_data)
 {
 	static pad = 2;
 	static bsize = 25;
@@ -470,9 +570,9 @@ function SpheresDraw(_data)
 	var blue_slider_x2 = _data.cont_x + 100 - pad;
 	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
     draw_set_colour(_data._color);
-	RTCircle(_data.x1,_data.y1,_data.r,false)
-	
+	RTCircle(_data.x1,_data.y1,_data.r,false);
 	if (_data.context_open == true)
+	//this shit has to be converted to circles :c
 		{
 		draw_set_alpha(0.5)
 		draw_rectangle_colour(_data.cont_x,_data.cont_y,_data.cont_x+100,_data.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
@@ -486,5 +586,8 @@ function SpheresDraw(_data)
 		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),red_x2,_data.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
 		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),green_x2,_data.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
 		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),blue_x2,_data.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
+		draw_text_colour(_data.cont_x,_data.cont_y+pad,"Copy Values",c_green,c_green,c_green,c_green,1)
+		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,"Copy Code",c_green,c_green,c_green,c_green,1)
+		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),"Delete",c_red,c_red,c_red,c_red,1)
 		}
 }
