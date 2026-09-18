@@ -30,6 +30,7 @@
     {"id":{"name":"gui_copy","path":"sounds/gui_copy/gui_copy.yy",},},
     {"id":{"name":"gui_create","path":"sounds/gui_create/gui_create.yy",},},
     {"id":{"name":"gui_delete","path":"sounds/gui_delete/gui_delete.yy",},},
+    {"id":{"name":"sprteszt","path":"sprites/sprteszt/sprteszt.yy",},},
   ],
   "resourceType":"GMProject",
   "resourceVersion":"2.0",

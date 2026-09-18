@@ -591,3 +591,110 @@ function CirclesDraw(_data)
 		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),"Delete",c_red,c_red,c_red,c_red,1)
 		}
 }
+
+function SpritesDraw(_data)
+{
+	static pad = 2;
+	static bsize = 25;
+	_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
+	var red_slider_x1 = _data.cont_x + pad;
+	var red_slider_x2 = _data.cont_x + 100 - pad;
+	var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
+	var green_slider_x1 = _data.cont_x + pad;
+	var green_slider_x2 = _data.cont_x + 100 - pad;
+	var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
+	var blue_slider_x1 = _data.cont_x + pad;
+	var blue_slider_x2 = _data.cont_x + 100 - pad;
+	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
+    draw_set_colour(_data._color);
+	RTSprites(_data.sprite,_data.sub,_data.x1,_data.y1)
+	if (_data.context_open == true)
+	//this shit has to be converted to circles :c
+		{
+		draw_set_alpha(0.5)
+		draw_rectangle_colour(_data.cont_x,_data.cont_y,_data.cont_x+100,_data.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad,_data.cont_x+100-pad,_data.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,_data.cont_x+100-pad,_data.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),_data.cont_x+100-pad,_data.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),_data.cont_x+100-pad,_data.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),_data.cont_x+100-pad,_data.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),_data.cont_x+100-pad,_data.cont_y+(bsize*6),c_gray,c_gray,c_gray,c_gray,false);
+		draw_set_alpha(1)
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),red_x2,_data.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),green_x2,_data.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
+		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),blue_x2,_data.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
+		draw_text_colour(_data.cont_x,_data.cont_y+pad,"Copy Values",c_green,c_green,c_green,c_green,1)
+		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,"Copy Code",c_green,c_green,c_green,c_green,1)
+		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),"Delete",c_red,c_red,c_red,c_red,1)
+		}
+}
+
+function SpritesInterat(_data)
+{
+var handled = false;
+static pad = 2;
+static bsize = 25;
+var mx = device_mouse_x_to_gui(0);
+var my = device_mouse_y_to_gui(0);
+_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
+var red_slider_x1 = _data.cont_x + pad;
+var red_slider_x2 = _data.cont_x + 100 - pad;
+var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
+var green_slider_x1 = _data.cont_x + pad;
+var green_slider_x2 = _data.cont_x + 100 - pad;
+var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
+var blue_slider_x1 = _data.cont_x + pad;
+var blue_slider_x2 = _data.cont_x + 100 - pad;
+var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
+var spriteW = sprite_get_width(_data.sprite)
+var spriteH = sprite_get_height(_data.sprite)
+
+		if (isInBox(_data.x1, _data.y1, _data.x1+spriteW, _data.y1+spriteH))
+		{
+		    if (mouse_check_button_pressed(mb_left))
+		    {
+				if (_data.context_open == false)
+				{
+		        _data.drag = 5;
+				_data.last_mx = mx;
+				_data.last_my = my;
+				handled = true;
+				}
+		    }
+
+
+if (mouse_check_button(mb_left))
+    {
+        switch (_data.drag)
+        {
+            case 1:
+                _data.y1 = my
+            break;
+            case 3:
+                _data.x1 = mx;
+            break;
+			case 5:
+				if (_data.context_open == true && handled == false){_data.context_open = false}
+	            var dx = mx - _data.last_mx;
+	            var dy = my - _data.last_my;
+
+	            _data.x1 += dx;
+	            _data.y1 += dy;
+
+	            _data.last_mx = mx;
+	            _data.last_my = my;
+			break;
+        }
+    }
+    else
+    {
+        _data.drag = 0;
+        window_set_cursor(cr_default);
+    }
+	}
+}
+
+function RTSprites(index,sub,x1,y1)
+{
+	draw_sprite(index,sub,x1,y1)
+}
