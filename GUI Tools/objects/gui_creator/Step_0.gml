@@ -46,7 +46,7 @@ if (!mouse_handled && isInBox(0, 0, display_get_gui_width(), 80))
         var kind = "";
         if (isInBox(12, 6, 200, 51)) kind = "rectangle";
         else if (isInBox(212, 6, 400, 51)) kind = "circle";
-        else if (isInBox(412, 6, 600, 51)) GUISpritePickerOpen(sprite_picker);
+        else if (isInBox(412, 6, 600, 51)) GUISpritePickerOpen(sprite_picker) audio_play_sound(gui_copy, 0, false);
         if (kind != "")
         {
             var data = GUIShapeCreate(kind, display_get_gui_width() / 2, display_get_gui_height() / 2, -1);
