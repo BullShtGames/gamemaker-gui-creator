@@ -1,6 +1,18 @@
 if (!guimode) exit;
 
 window_set_cursor(cr_default);
+// The picker is modal: selection, navigation, and dismissal cannot edit shapes.
+if (sprite_picker.open)
+{
+    var selected_sprite = GUISpritePickerInteract(sprite_picker);
+    if (!is_undefined(selected_sprite) && sprite_exists(selected_sprite))
+    {
+        var selected_shape = GUIShapeCreate("sprite", display_get_gui_width() / 2, display_get_gui_height() / 2, selected_sprite);
+        array_push(sprites, selected_shape);
+        audio_play_sound(gui_create, 0, false);
+    }
+    exit;
+}
 var mouse_handled = false;
 
 // Keep ownership while dragging, even over another shape, menu, or toolbar.
@@ -34,15 +46,14 @@ if (!mouse_handled && isInBox(0, 0, display_get_gui_width(), 80))
         var kind = "";
         if (isInBox(12, 6, 200, 51)) kind = "rectangle";
         else if (isInBox(212, 6, 400, 51)) kind = "circle";
-        else if (isInBox(412, 6, 600, 51) && sprite_exists(spritename)) kind = "sprite";
+        else if (isInBox(412, 6, 600, 51)) GUISpritePickerOpen(sprite_picker);
         if (kind != "")
         {
-            var data = GUIShapeCreate(kind, display_get_gui_width() / 2, display_get_gui_height() / 2, spritename);
+            var data = GUIShapeCreate(kind, display_get_gui_width() / 2, display_get_gui_height() / 2, -1);
             switch (kind)
             {
                 case "rectangle": array_push(rectangles, data); break;
                 case "circle": array_push(circles, data); break;
-                case "sprite": array_push(sprites, data); break;
             }
             audio_play_sound(gui_create, 0, false);
         }

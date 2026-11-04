@@ -1,4 +1,5 @@
 guimode = !guimode;
+sprite_picker.open = false;
 if (!is_undefined(active_shape)) active_shape.drag = 0;
 if (!is_undefined(context_shape))
 {
