@@ -1,113 +1,40 @@
-if (guimode == true)
-{
-draw_set_font(Roboto)
-draw_set_alpha(0.5)
-draw_rectangle_colour(0,0,window_get_width(),80,c_black,c_black,c_black,c_black,false)
-draw_text_colour(12,6,"Add Rectangle",c_green,c_green,c_green,c_green,1)
-draw_text_colour(212,6,"Add Circle",c_green,c_green,c_green,c_green,1)
-draw_text_colour(412,6,"Add Sprite",c_green,c_green,c_green,c_green,1)
-draw_rectangle_colour(12,6,200,51,c_gray,c_gray,c_gray,c_gray,false)
-draw_rectangle_colour(212,6,400,51,c_gray,c_gray,c_gray,c_gray,false)
-draw_rectangle_colour(412,6,600,51,c_gray,c_gray,c_gray,c_gray,false)
-if isInBox(12,6,200,51)
-{
-	draw_rectangle_colour(12,6,200,51,c_white,c_white,c_white,c_white,false)
-	if mouse_check_button_pressed(mb_left)
-	{
-			var rect = {
-			    x1: winhalfW,
-			    y1: winhalfH,
-			    x2: winhalfW+100,
-			    y2: winhalfH+100,
-			    _color: c_white,
-			    drag: 0,
-				last_mx: 0,
-				last_my: 0,
-				context_open: false,
-				cont_x: 0,
-				cont_y: 0,
-				red: 255,
-				green: 255,
-				blue: 255,
-				delete_me: false
-			};
-			audio_play_sound(gui_create,0,0)
-			array_push(rectangles, rect);
-	}
-}
-draw_set_alpha(1)
+// Restore shared drawing state so importing the editor does not affect the game.
+var saved_color = draw_get_color();
+var saved_alpha = draw_get_alpha();
+var saved_font = draw_get_font();
+var saved_halign = draw_get_halign();
+var saved_valign = draw_get_valign();
+draw_set_alpha(1);
 
-if isInBox(212,6,400,51)
+for (var i = 0; i < array_length(sprites); i++) SpritesDraw(sprites[i]);
+for (var i = 0; i < array_length(rectangles); i++) RectanglesDraw(rectangles[i]);
+for (var i = 0; i < array_length(circles); i++) CirclesDraw(circles[i]);
+
+if (guimode)
 {
-	draw_rectangle_colour(212,6,400,51,c_white,c_white,c_white,c_white,false)
-	if mouse_check_button_pressed(mb_left)
-	{
-			var data = {
-			    x1: winhalfW,
-			    y1: winhalfH,
-				r: 5,
-			    _color: c_white,
-			    drag: 0,
-				last_mx: 0,
-				last_my: 0,
-				context_open: false,
-				cont_x: 0,
-				cont_y: 0,
-				red: 255,
-				green: 255,
-				blue: 255,
-				delete_me: false
-			};
-			audio_play_sound(gui_create,0,0)
-			array_push(circles, data);
-	}
+    draw_set_font(Roboto);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+    draw_set_color(c_black);
+    draw_set_alpha(0.5);
+    draw_rectangle(0, 0, display_get_gui_width(), 80, false);
+    draw_set_alpha(1);
+    var labels = ["Add Rectangle", "Add Circle", "Add Sprite"];
+    for (var button = 0; button < 3; button++)
+    {
+        var bx = 12 + button * 200;
+        draw_set_color(c_gray);
+        if (isInBox(bx, 6, bx + 188, 51)) draw_set_color(c_white);
+        draw_rectangle(bx, 6, bx + 188, 51, false);
+        draw_set_color(c_green);
+        draw_text(bx, 6, labels[button]);
+    }
+    // Menus are drawn last and receive input first.
+    if (!is_undefined(context_shape)) GUIContextDraw(context_shape);
 }
 
-if isInBox(412,6,600,51)
-{
-	draw_rectangle_colour(412,6,600,51,c_white,c_white,c_white,c_white,false)
-	if mouse_check_button_pressed(mb_left)
-	{
-			var data = {
-			    x1: winhalfW,
-			    y1: winhalfH,
-				sprite: spritename,
-			    sub: 0,
-			    drag: 0,
-				last_mx: 0,
-				last_my: 0,
-				context_open: false,
-				cont_x: 0,
-				cont_y: 0,
-				red: 255,
-				green: 255,
-				blue: 255,
-				delete_me: false
-			};
-			audio_play_sound(gui_create,0,0)
-			array_push(sprites, data);
-		}
-	}
-}
-if (sprites != 0)
-{
-	for (var i = 0; i < array_length(sprites); i++)
-	{
-	    SpritesDraw(sprites[i])
-	}
-}
-
-if (rectangles != 0)
-{
-	for (var i = 0; i < array_length(rectangles); i++)
-	{
-	    RectanglesDraw(rectangles[i])
-	}
-}
-if (circles != 0)
-{
-	for (var i = 0; i < array_length(circles); i++)
-	{
-	    CirclesDraw(circles[i])
-	}
-}
+draw_set_color(saved_color);
+draw_set_alpha(saved_alpha);
+draw_set_font(saved_font);
+draw_set_halign(saved_halign);
+draw_set_valign(saved_valign);

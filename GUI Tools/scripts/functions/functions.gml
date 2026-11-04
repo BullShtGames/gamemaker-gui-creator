@@ -1,700 +1,235 @@
-/// @function                 isInBox;
-/// @param {real}  xPos Top left horizontal corner of the area
-/// @param {real}  yPos Top left vertical corner of the area
-/// @param {real}  x2Pos Bottom right horizontal corner of the area
-/// @param {real}  y2Pos Bottom right vertical corner of the area
-/// @description              GUI USE ONLY: Checks if the mouse is inside the given rectangle
-function isInBox(xPos,yPos,x2Pos,y2Pos)
+/// GUI hit tests use the same coordinate space as Draw GUI.
+function isInBox(xPos, yPos, x2Pos, y2Pos)
 {
-if (window_mouse_get_x() > xPos && window_mouse_get_y() > yPos && window_mouse_get_x() < x2Pos && window_mouse_get_y() < y2Pos)
-{
-	return true;
-}
+    var mx = device_mouse_x_to_gui(0);
+    var my = device_mouse_y_to_gui(0);
+    return mx >= min(xPos, x2Pos) && mx <= max(xPos, x2Pos)
+        && my >= min(yPos, y2Pos) && my <= max(yPos, y2Pos);
 }
 
-/// @function isInCircle
-/// @param {real} xPos Horizontal position of the circle center
-/// @param {real} yPos Vertical position of the circle center
-/// @param {real} radius Radius of the circle
-/// @description GUI USE ONLY: Checks if the mouse is inside the given circle
 function isInCircle(xPos, yPos, radius)
 {
-var mx = device_mouse_x_to_gui(0);
-var my = device_mouse_y_to_gui(0);
-
-return point_distance(mx, my, xPos, yPos) <= radius;
-
+    return point_distance(device_mouse_x_to_gui(0), device_mouse_y_to_gui(0), xPos, yPos) <= radius;
 }
 
-
-/// @function                 isInBoxWorld;
-/// @param {real}  xPos Top left horizontal corner of the area
-/// @param {real}  yPos Top left vertical corner of the area
-/// @param {real}  x2Pos Bottom right horizontal corner of the area
-/// @param {real}  y2Pos Bottom right vertical corner of the area
-/// @description   Checks if the mouse is inside the given rectangle within the room
-function isInBoxWorld(xPos,yPos,x2Pos,y2Pos)
+function isInBoxWorld(xPos, yPos, x2Pos, y2Pos)
 {
-	if (mouse_x > xPos && mouse_y > yPos && mouse_x < x2Pos && mouse_y < y2Pos)
-	{
-		return true;
-	}
+    return mouse_x >= min(xPos, x2Pos) && mouse_x <= max(xPos, x2Pos)
+        && mouse_y >= min(yPos, y2Pos) && mouse_y <= max(yPos, y2Pos);
 }
 
+function RTRectangle(x1, y1, x2, y2, outline) { draw_rectangle(x1, y1, x2, y2, outline); }
+function RTCircle(x1, y1, r, outline) { draw_circle(x1, y1, r, outline); }
+function RTSprites(index, sub, x1, y1) { draw_sprite(index, sub, x1, y1); }
 
-/// @function                 RTRectangle;
-/// @param {real}  x1 Top left horizontal corner of the area
-/// @param {real}  y1 Top left vertical corner of the area
-/// @param {real}  x2 Bottom right horizontal corner of the area
-/// @param {real}  y2 Bottom right vertical corner of the area
-/// @description   This function gets called when using the realtime editor
-function RTRectangle(x1,y1,x2,y2,outline)
-{
-	draw_rectangle(x1,y1,x2,y2,outline)
-}
-
-/// @function                 RTCircle;
-/// @param {real}  x1 Top left horizontal corner of the area
-/// @param {real}  y1 Top left vertical corner of the area
-/// @param {real}  x2 Bottom right horizontal corner of the area
-/// @param {real}  y2 Bottom right vertical corner of the area
-/// @description   This function gets called when using the realtime editor
-function RTCircle(x1,y1,r,outline)
-{
-	draw_circle(x1,y1,r,outline)
-}
-
-
-/// @function                 GUISlider;
-/// @param {real}  _x1 Top left horizontal corner of the area
-/// @param {real}  _y1 Top left vertical corner of the area
-/// @param {real}  _x2 Bottom right horizontal corner of the area
-/// @param {real}  _y2 Bottom right vertical corner of the area
-/// @param {real}  _value Value of the slider
-/// @description   This function gets called when using the realtime editor
 function GUISlider(_x1, _y1, _x2, _y2, _value)
 {
-    var mx = device_mouse_x_to_gui(0);
-    
-    if (mouse_check_button(mb_left))
-    {
-        if (isInBox(_x1, _y1 - 5, _x2, _y2 + 5))
-        {
-            var t = (mx - _x1) / (_x2 - _x1);
-            t = clamp(t, 0, 1);
-
-            _value = round(t * 255);
-        }
-    }
-
+    if (_x2 <= _x1) return _value;
+    if (mouse_check_button(mb_left) && isInBox(_x1, _y1, _x2, _y2))
+        return round(clamp((device_mouse_x_to_gui(0) - _x1) / (_x2 - _x1), 0, 1) * 255);
     return _value;
 }
-/// @function                 CreateRectangle;
-/// @param {real}  _rect this passes the array to the func
-/// @description   This function gets called when using the realtime editor
-function CreateRectangle(_rect)
+
+function GUIShapeCreate(_kind, _x, _y, _sprite)
 {
-	static pad = 2;
-	static bsize = 25;
+    return {
+        kind: _kind, x1: _x, y1: _y, x2: _x + 100, y2: _y + 100,
+        r: 5, sprite: _sprite, sub: 0, _color: c_white,
+        drag: 0, slider: -1, last_mx: 0, last_my: 0,
+        context_open: false, cont_x: 0, cont_y: 0,
+        red: 255, green: 255, blue: 255, delete_me: false
+    };
+}
+
+function GUIShapeHit(_data)
+{
+    switch (_data.kind)
+    {
+        case "rectangle":
+            return isInBox(_data.x1 - 5, _data.y1 - 5, _data.x2 + 5, _data.y2 + 5);
+        case "circle":
+            return isInCircle(_data.x1, _data.y1, _data.r + 6);
+        case "sprite":
+            if (!sprite_exists(_data.sprite)) return false;
+            var left = _data.x1 - sprite_get_xoffset(_data.sprite);
+            var top = _data.y1 - sprite_get_yoffset(_data.sprite);
+            return isInBox(left, top, left + sprite_get_width(_data.sprite), top + sprite_get_height(_data.sprite));
+    }
+    return false;
+}
+
+/// Step captures one shape until the mouse is released.
+function GUIShapeInteract(_data)
+{
     var mx = device_mouse_x_to_gui(0);
     var my = device_mouse_y_to_gui(0);
-	_rect._color = make_color_rgb(_rect.red,_rect.green,_rect.blue);
-	var red_slider_x1 = _rect.cont_x + pad;
-	var red_slider_x2 = _rect.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _rect.red / 255);
-	var green_slider_x1 = _rect.cont_x + pad;
-	var green_slider_x2 = _rect.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _rect.green / 255);
-	var blue_slider_x1 = _rect.cont_x + pad;
-	var blue_slider_x2 = _rect.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _rect.blue  / 255);
-	
-        if (isInBox(_rect.x1 - 5, _rect.y1 - 5, _rect.x2 + 5, _rect.y1 + 5))//top
-        {
-			if (mouse_check_button_pressed(mb_left)) {_rect.drag = 1;}
-			window_set_cursor(cr_size_ns);
-        }
-        else if (isInBox(_rect.x1 - 5, _rect.y2 - 5, _rect.x2 + 5, _rect.y2 + 5))//bottom
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 2;}
-			window_set_cursor(cr_size_ns);
-        }
-        else if (isInBox(_rect.x1 - 5, _rect.y1, _rect.x1 + 5, _rect.y2))//left
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 3;}
-			window_set_cursor(cr_size_we);
-        }
-        else if (isInBox(_rect.x2 - 5, _rect.y1, _rect.x2 + 5, _rect.y2))//right
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 4;}
-            window_set_cursor(cr_size_we);
-        }
-		else if (isInBox(_rect.x1, _rect.y1, _rect.x2, _rect.y2))
-		{
-		    if (mouse_check_button_pressed(mb_left))
-		    {
-		        _rect.drag = 5;
-				_rect.last_mx = mx;
-				_rect.last_my = my;
-		    }
-			window_set_cursor(cr_size_all);
-		}
+    var hit = GUIShapeHit(_data);
+    if (!mouse_check_button(mb_left)) _data.drag = 0;
+    if (_data.drag == 0 && !hit) return false;
+
+    var mode = 5;
+    if (_data.kind == "rectangle")
+    {
+        // Leave a movable interior even at the minimum size.
+        var edge_x = min(5, (_data.x2 - _data.x1) / 4);
+        var edge_y = min(5, (_data.y2 - _data.y1) / 4);
+        if (my <= _data.y1 + edge_y) mode = 1;
+        else if (my >= _data.y2 - edge_y) mode = 2;
+        else if (mx <= _data.x1 + edge_x) mode = 3;
+        else if (mx >= _data.x2 - edge_x) mode = 4;
+    }
+    else if (_data.kind == "circle")
+    {
+        var distance = point_distance(mx, my, _data.x1, _data.y1);
+        if (distance >= max(_data.r / 2, _data.r - 6) && distance <= _data.r + 6) mode = 1;
+    }
+
+    if (mouse_check_button_pressed(mb_left) && hit)
+    {
+        _data.drag = mode;
+        _data.last_mx = mx;
+        _data.last_my = my;
+    }
+
+    var cursor_mode = mode;
+    if (_data.drag != 0) cursor_mode = _data.drag;
+    if (cursor_mode == 5) window_set_cursor(cr_size_all);
+    else if (cursor_mode <= 2) window_set_cursor(cr_size_ns);
+    else window_set_cursor(cr_size_we);
+
     if (mouse_check_button(mb_left))
     {
-        switch (_rect.drag)
+        if (_data.drag == 5)
         {
-            case 1:
-                _rect.y1 = my
-            break;
+            var dx = mx - _data.last_mx;
+            var dy = my - _data.last_my;
+            _data.x1 += dx;
+            _data.y1 += dy;
+            _data.x2 += dx;
+            _data.y2 += dy;
+            _data.last_mx = mx;
+            _data.last_my = my;
+        }
+        else if (_data.kind == "circle" && _data.drag == 1)
+            _data.r = max(5, point_distance(mx, my, _data.x1, _data.y1));
+        else if (_data.kind == "rectangle")
+        {
+            switch (_data.drag)
+            {
+                case 1: _data.y1 = min(my, _data.y2 - 5); break;
+                case 2: _data.y2 = max(my, _data.y1 + 5); break;
+                case 3: _data.x1 = min(mx, _data.x2 - 5); break;
+                case 4: _data.x2 = max(mx, _data.x1 + 5); break;
+            }
+        }
+    }
+    return true;
+}
 
+function GUIContextHit(_data)
+{
+    return isInBox(_data.cont_x, _data.cont_y, _data.cont_x + 100, _data.cont_y + 150);
+}
+
+function GUIShapeValues(_data)
+{
+    var values = string(_data.x1) + "," + string(_data.y1);
+    if (_data.kind == "rectangle") return values + "," + string(_data.x2) + "," + string(_data.y2);
+    if (_data.kind == "circle") return values + "," + string(_data.r);
+    return sprite_get_name(_data.sprite) + "," + string(_data.sub) + "," + values;
+}
+
+function GUIShapeCode(_data)
+{
+    var command = "draw_rectangle";
+    var arguments_text = GUIShapeValues(_data);
+    if (_data.kind == "circle") command = "draw_circle";
+    if (_data.kind == "sprite")
+    {
+        return "draw_sprite_ext(" + arguments_text + ",1,1,0,make_color_rgb("
+            + string(_data.red) + "," + string(_data.green) + "," + string(_data.blue) + "),1);";
+    }
+    return "draw_set_color(make_color_rgb(" + string(_data.red) + "," + string(_data.green)
+        + "," + string(_data.blue) + "));\n" + command + "(" + arguments_text + ",false);";
+}
+
+/// Menu rows are disjoint. A captured slider continues outside its bounds.
+function GUIContextInteract(_data)
+{
+    if (!mouse_check_button(mb_left)) _data.slider = -1;
+    if (mouse_check_button_pressed(mb_left) && GUIContextHit(_data))
+    {
+        var row = floor((device_mouse_y_to_gui(0) - _data.cont_y) / 25);
+        switch (row)
+        {
+            case 0:
+                clipboard_set_text(GUIShapeValues(_data));
+                audio_play_sound(gui_copy, 0, false);
+                break;
+            case 1:
+                clipboard_set_text(GUIShapeCode(_data));
+                audio_play_sound(gui_copy, 0, false);
+                break;
             case 2:
-                _rect.y2 = my;
-            break;
-
-            case 3:
-                _rect.x1 = mx;
-            break;
-
-            case 4:
-                _rect.x2 = mx;
-            break;
-			case 5:
-				if (_rect.context_open == true){_rect.context_open = false}
-	            var dx = mx - _rect.last_mx;
-	            var dy = my - _rect.last_my;
-
-	            _rect.x1 += dx;
-	            _rect.x2 += dx;
-	            _rect.y1 += dy;
-	            _rect.y2 += dy;
-
-	            _rect.last_mx = mx;
-	            _rect.last_my = my;
-			break;
+                _data.delete_me = true;
+                audio_play_sound(gui_delete, 0, false);
+                break;
+            default: _data.slider = clamp(row - 3, 0, 2); break;
         }
     }
-    else
+    if (_data.slider >= 0 && mouse_check_button(mb_left))
     {
-        _rect.drag = 0;
-        window_set_cursor(cr_default);
+        var value = round(clamp((device_mouse_x_to_gui(0) - _data.cont_x - 2) / 96, 0, 1) * 255);
+        switch (_data.slider)
+        {
+            case 0: _data.red = value; break;
+            case 1: _data.green = value; break;
+            case 2: _data.blue = value; break;
+        }
     }
-		draw_set_colour(_rect._color);
-        RTRectangle(_rect.x1,_rect.y1,_rect.x2,_rect.y2,false);
-		
-	if (isInBox(_rect.x1, _rect.y1, _rect.x2, _rect.y2))
-	{
-		if (mouse_check_button_pressed(mb_right))
-		{
-		_rect.cont_x = window_mouse_get_x()
-		_rect.cont_y = window_mouse_get_y()
-		_rect.context_open = !_rect.context_open
-		}
-	}
-	if (_rect.context_open == true)
-	{
-		draw_set_alpha(0.5)
-		draw_rectangle_colour(_rect.cont_x,_rect.cont_y,_rect.cont_x+100,_rect.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad,_rect.cont_x+100-pad,_rect.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+bsize,_rect.cont_x+100-pad,_rect.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*2),_rect.cont_x+100-pad,_rect.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),_rect.cont_x+100-pad,_rect.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),_rect.cont_x+100-pad,_rect.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
-		draw_set_alpha(1)
-		//copy
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad,_rect.cont_x+100-pad,_rect.cont_y+bsize))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				clipboard_set_text(string(_rect.x1)+","+string(_rect.y1)+","+string(_rect.x2)+","+string(_rect.y2));
-				audio_play_sound(gui_copy,0,0);
-			}
-		}
-		//delete
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad+bsize,_rect.cont_x+100-pad,_rect.cont_y+(bsize*2)))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				_rect.delete_me = true;
-				audio_play_sound(gui_delete,0,0);
-			}
-		}
-		//RGB
-		_rect.red = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),_rect.cont_x+100-pad,_rect.cont_y+(bsize*4),_rect.red);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),red_x2,_rect.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
-		_rect.green = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),_rect.cont_x+100-pad,_rect.cont_y+(bsize*5),_rect.green);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),green_x2,_rect.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
-		_rect.blue = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),_rect.cont_x+100-pad,_rect.cont_y+(bsize*6),_rect.blue);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),blue_x2,_rect.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
-	}
 }
 
-/// @function                 RectanglesDraw;
-/// @param {real}  _rect this passes the array to the func
-/// @description   This function gets called when using the realtime editor
-function RectanglesDraw(_rect)
+function GUIShapeDraw(_data)
 {
-	static pad = 2;
-	static bsize = 25;
-	_rect._color = make_color_rgb(_rect.red,_rect.green,_rect.blue);
-	var red_slider_x1 = _rect.cont_x + pad;
-	var red_slider_x2 = _rect.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _rect.red / 255);
-	var green_slider_x1 = _rect.cont_x + pad;
-	var green_slider_x2 = _rect.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _rect.green / 255);
-	var blue_slider_x1 = _rect.cont_x + pad;
-	var blue_slider_x2 = _rect.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _rect.blue  / 255);
-    draw_set_colour(_rect._color);
-	RTRectangle(_rect.x1,_rect.y1,_rect.x2,_rect.y2,false);
-	
-	if (_rect.context_open == true)
-		{
-		draw_set_alpha(0.5)
-		draw_rectangle_colour(_rect.cont_x,_rect.cont_y,_rect.cont_x+100,_rect.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad,_rect.cont_x+100-pad,_rect.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+bsize,_rect.cont_x+100-pad,_rect.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*2),_rect.cont_x+100-pad,_rect.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),_rect.cont_x+100-pad,_rect.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),_rect.cont_x+100-pad,_rect.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),_rect.cont_x+100-pad,_rect.cont_y+(bsize*6),c_gray,c_gray,c_gray,c_gray,false);
-		draw_set_alpha(1)
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),red_x2,_rect.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),green_x2,_rect.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
-		draw_rectangle_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),blue_x2,_rect.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
-		draw_text_colour(_rect.cont_x,_rect.cont_y+pad,"Copy Values",c_green,c_green,c_green,c_green,1)
-		draw_text_colour(_rect.cont_x+pad,_rect.cont_y+pad+bsize,"Copy Code",c_green,c_green,c_green,c_green,1)
-		draw_text_colour(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*2),"Delete",c_red,c_red,c_red,c_red,1)
-		}
-}
-
-/// @function                 RectanglesInteract;
-/// @param {real}  _rect this passes the array to the func
-/// @description   This function gets called when using the realtime editor
-function RectanglesInteract(_rect)
-{
-	var handled = false;
-	static pad = 2;
-	static bsize = 25;
-    var mx = device_mouse_x_to_gui(0);
-    var my = device_mouse_y_to_gui(0);
-	_rect._color = make_color_rgb(_rect.red,_rect.green,_rect.blue);
-	var red_slider_x1 = _rect.cont_x + pad;
-	var red_slider_x2 = _rect.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _rect.red / 255);
-	var green_slider_x1 = _rect.cont_x + pad;
-	var green_slider_x2 = _rect.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _rect.green / 255);
-	var blue_slider_x1 = _rect.cont_x + pad;
-	var blue_slider_x2 = _rect.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _rect.blue  / 255);
-	
-	if (isInBox(_rect.x1 - 5, _rect.y1 - 5, _rect.x2 + 5, _rect.y1 + 5))//top
-        {
-			if (mouse_check_button_pressed(mb_left)) {_rect.drag = 1;}
-			window_set_cursor(cr_size_ns);
-			handled = true;
-        }
-        else if (isInBox(_rect.x1 - 5, _rect.y2 - 5, _rect.x2 + 5, _rect.y2 + 5))//bottom
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 2;}
-			window_set_cursor(cr_size_ns);
-			handled = true;
-        }
-        else if (isInBox(_rect.x1 - 5, _rect.y1, _rect.x1 + 5, _rect.y2))//left
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 3;}
-			window_set_cursor(cr_size_we);
-			handled = true;
-        }
-        else if (isInBox(_rect.x2 - 5, _rect.y1, _rect.x2 + 5, _rect.y2))//right
-        {
-            if (mouse_check_button_pressed(mb_left)) {_rect.drag = 4;}
-            window_set_cursor(cr_size_we);
-			handled = true;
-        }
-		else if (isInBox(_rect.x1, _rect.y1, _rect.x2, _rect.y2))
-		{
-		    if (mouse_check_button_pressed(mb_left))
-		    {
-				if (_rect.context_open == false)
-				{
-		        _rect.drag = 5;
-				_rect.last_mx = mx;
-				_rect.last_my = my;
-				handled = true;
-				}
-		    }
-			window_set_cursor(cr_size_all);
-		}
-    if (mouse_check_button(mb_left))
+    _data._color = make_color_rgb(_data.red, _data.green, _data.blue);
+    draw_set_color(_data._color);
+    switch (_data.kind)
     {
-        switch (_rect.drag)
-        {
-            case 1:
-                _rect.y1 = my
+        case "rectangle": RTRectangle(_data.x1, _data.y1, _data.x2, _data.y2, false); break;
+        case "circle": RTCircle(_data.x1, _data.y1, _data.r, false); break;
+        case "sprite":
+            if (sprite_exists(_data.sprite))
+                draw_sprite_ext(_data.sprite, _data.sub, _data.x1, _data.y1, 1, 1, 0, _data._color, 1);
             break;
-
-            case 2:
-                _rect.y2 = my;
-            break;
-
-            case 3:
-                _rect.x1 = mx;
-            break;
-
-            case 4:
-                _rect.x2 = mx;
-            break;
-			case 5:
-				if (_rect.context_open == true && handled == false){_rect.context_open = false}
-	            var dx = mx - _rect.last_mx;
-	            var dy = my - _rect.last_my;
-
-	            _rect.x1 += dx;
-	            _rect.x2 += dx;
-	            _rect.y1 += dy;
-	            _rect.y2 += dy;
-
-	            _rect.last_mx = mx;
-	            _rect.last_my = my;
-			break;
-        }
     }
-    else
+}
+
+function GUIContextDraw(_data)
+{
+    var cx = _data.cont_x;
+    var cy = _data.cont_y;
+    draw_set_color(c_gray);
+    draw_set_alpha(0.9);
+    draw_rectangle(cx, cy, cx + 100, cy + 150, false);
+    draw_set_alpha(1);
+    draw_set_color(c_green);
+    draw_text(cx + 2, cy + 2, "Copy Values");
+    draw_text(cx + 2, cy + 27, "Copy Code");
+    draw_set_color(c_red);
+    draw_text(cx + 2, cy + 52, "Delete");
+    var values = [_data.red, _data.green, _data.blue];
+    var colors = [c_red, c_green, c_blue];
+    for (var row = 0; row < 3; row++)
     {
-        _rect.drag = 0;
-        window_set_cursor(cr_default);
+        draw_set_color(colors[row]);
+        draw_rectangle(cx + 2, cy + 77 + row * 25, cx + 2 + 96 * values[row] / 255, cy + 100 + row * 25, false);
     }
-
-	if (isInBox(_rect.x1, _rect.y1, _rect.x2, _rect.y2))
-	{
-		if (mouse_check_button_pressed(mb_right))
-		{
-		_rect.cont_x = window_mouse_get_x()
-		_rect.cont_y = window_mouse_get_y()
-		_rect.context_open = !_rect.context_open
-		}
-	}	
-	if (_rect.context_open == true)
-	{
-		//copy
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad,_rect.cont_x+100-pad,_rect.cont_y+bsize))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				clipboard_set_text(string(_rect.x1)+","+string(_rect.y1)+","+string(_rect.x2)+","+string(_rect.y2));
-				audio_play_sound(gui_copy,0,0);
-			}
-		}
-		//copy code
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad+bsize,_rect.cont_x+100-pad,_rect.cont_y+(bsize*2)))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				clipboard_set_text(string(_rect.x1)+","+string(_rect.y1)+","+string(_rect.x2)+","+string(_rect.y2));
-				clipboard_set_text("draw_rectangle("+string(_rect.x1)+","+string(_rect.y1)+","+string(_rect.x2)+","+string(_rect.y2)+",false)")
-				audio_play_sound(gui_copy,0,0);
-			}
-		}
-		//delete
-		if (isInBox(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*2),_rect.cont_x+100-pad,_rect.cont_y+(bsize*3)))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				_rect.delete_me = true;
-				audio_play_sound(gui_delete,0,0);
-			}
-		}
-		//RGB
-		_rect.blue = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*5),_rect.cont_x+100-pad,_rect.cont_y+(bsize*6),_rect.blue);
-		_rect.green = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*4),_rect.cont_x+100-pad,_rect.cont_y+(bsize*5),_rect.green);
-		_rect.red = GUISlider(_rect.cont_x+pad,_rect.cont_y+pad+(bsize*3),_rect.cont_x+100-pad,_rect.cont_y+(bsize*4),_rect.red);
-	}
-	return handled;
 }
 
-
-
-
-
-function CirclesInteract(_data)
-{
-	var handled = false;
-	static pad = 2;
-	static bsize = 25;
-    var mx = device_mouse_x_to_gui(0);
-    var my = device_mouse_y_to_gui(0);
-	_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
-	var red_slider_x1 = _data.cont_x + pad;
-	var red_slider_x2 = _data.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
-	var green_slider_x1 = _data.cont_x + pad;
-	var green_slider_x2 = _data.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
-	var blue_slider_x1 = _data.cont_x + pad;
-	var blue_slider_x2 = _data.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
-	
-	if (mouse_check_button_pressed(mb_left))
-	{
-	    var mouse_dist = point_distance(
-	        mx,
-	        my,
-	        _data.x1,
-	        _data.y1
-	    );
-
-	    if (mouse_dist >= _data.r - 6 && mouse_dist <= _data.r + 6)
-	    {
-	        _data.drag = 1;
-	        handled = true;
-	    }
-    
-	    else if (isInCircle(_data.x1, _data.y1, _data.r))
-	    {
-	        _data.drag = 2;
-
-	        _data.last_mx = mx;
-	        _data.last_my = my;
-
-	        handled = true;
-	    }
-	}
-
-	if (_data.drag == 1)
-	{
-	    if (mouse_check_button(mb_left))
-	    {
-	        _data.r = point_distance(
-	            mx,
-	            my,
-	            _data.x1,
-	            _data.y1
-	        );
-
-	        _data.r = max(_data.r, 5);
-
-	        handled = true;
-	    }
-	    else
-	    {
-	        _data.drag = 0;
-	    }
-	}
-	
-	else if (_data.drag == 2)
-	{
-	    if (mouse_check_button(mb_left))
-	    {
-	        var dx = mx - _data.last_mx;
-	        var dy = my - _data.last_my;
-
-	        _data.x1 += dx;
-	        _data.y1 += dy;
-
-	        _data.last_mx = mx;
-	        _data.last_my = my;
-
-	        handled = true;
-	    }
-	    else
-	    {
-	        _data.drag = 0;
-	    }
-	}
-	
-	if (isInCircle(_data.x1,_data.y1,_data.r))
-	{
-		if (mouse_check_button_pressed(mb_right))
-		{
-		_data.cont_x = window_mouse_get_x()
-		_data.cont_y = window_mouse_get_y()
-		_data.context_open = !_data.context_open
-		}
-	}	
-	
-
-	if (_data.context_open == true)
-	{
-		//copy
-		if (isInBox(_data.cont_x+pad,_data.cont_y+pad,_data.cont_x+100-pad,_data.cont_y+bsize))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				clipboard_set_text(string(_data.x1)+","+string(_data.y1)+","+string(_data.r));
-				audio_play_sound(gui_copy,0,0);
-			}
-		}
-		//copy code
-		if (isInBox(_data.cont_x+pad,_data.cont_y+pad+bsize,_data.cont_x+100-pad,_data.cont_y+(bsize*2)))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				clipboard_set_text("draw_circle("+string(_data.x1)+","+string(_data.y1)+","+string(_data.r)+",false)")
-				audio_play_sound(gui_copy,0,0);
-			}
-		}
-		//delete
-		if (isInBox(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),_data.cont_x+100-pad,_data.cont_y+(bsize*3)))
-		{
-			if mouse_check_button_pressed(mb_left)
-			{
-				_data.delete_me = true;
-				audio_play_sound(gui_delete,0,0);
-			}
-		}
-		//RGB
-		_data.blue = GUISlider(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),_data.cont_x+100-pad,_data.cont_y+(bsize*6),_data.blue);
-		_data.green = GUISlider(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),_data.cont_x+100-pad,_data.cont_y+(bsize*5),_data.green);
-		_data.red = GUISlider(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),_data.cont_x+100-pad,_data.cont_y+(bsize*4),_data.red);
-	}
-	return handled;
-}
-
-
-
-
-function CirclesDraw(_data)
-{
-	static pad = 2;
-	static bsize = 25;
-	_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
-	var red_slider_x1 = _data.cont_x + pad;
-	var red_slider_x2 = _data.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
-	var green_slider_x1 = _data.cont_x + pad;
-	var green_slider_x2 = _data.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
-	var blue_slider_x1 = _data.cont_x + pad;
-	var blue_slider_x2 = _data.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
-    draw_set_colour(_data._color);
-	RTCircle(_data.x1,_data.y1,_data.r,false);
-	if (_data.context_open == true)
-	//this shit has to be converted to circles :c
-		{
-		draw_set_alpha(0.5)
-		draw_rectangle_colour(_data.cont_x,_data.cont_y,_data.cont_x+100,_data.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad,_data.cont_x+100-pad,_data.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,_data.cont_x+100-pad,_data.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),_data.cont_x+100-pad,_data.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),_data.cont_x+100-pad,_data.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),_data.cont_x+100-pad,_data.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),_data.cont_x+100-pad,_data.cont_y+(bsize*6),c_gray,c_gray,c_gray,c_gray,false);
-		draw_set_alpha(1)
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),red_x2,_data.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),green_x2,_data.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),blue_x2,_data.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
-		draw_text_colour(_data.cont_x,_data.cont_y+pad,"Copy Values",c_green,c_green,c_green,c_green,1)
-		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,"Copy Code",c_green,c_green,c_green,c_green,1)
-		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),"Delete",c_red,c_red,c_red,c_red,1)
-		}
-}
-
-function SpritesDraw(_data)
-{
-	static pad = 2;
-	static bsize = 25;
-	_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
-	var red_slider_x1 = _data.cont_x + pad;
-	var red_slider_x2 = _data.cont_x + 100 - pad;
-	var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
-	var green_slider_x1 = _data.cont_x + pad;
-	var green_slider_x2 = _data.cont_x + 100 - pad;
-	var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
-	var blue_slider_x1 = _data.cont_x + pad;
-	var blue_slider_x2 = _data.cont_x + 100 - pad;
-	var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
-    draw_set_colour(_data._color);
-	RTSprites(_data.sprite,_data.sub,_data.x1,_data.y1)
-	if (_data.context_open == true)
-	//this shit has to be converted to circles :c
-		{
-		draw_set_alpha(0.5)
-		draw_rectangle_colour(_data.cont_x,_data.cont_y,_data.cont_x+100,_data.cont_y+150,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad,_data.cont_x+100-pad,_data.cont_y+bsize,c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,_data.cont_x+100-pad,_data.cont_y+(bsize*2),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),_data.cont_x+100-pad,_data.cont_y+(bsize*3),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),_data.cont_x+100-pad,_data.cont_y+(bsize*4),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),_data.cont_x+100-pad,_data.cont_y+(bsize*5),c_gray,c_gray,c_gray,c_gray,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),_data.cont_x+100-pad,_data.cont_y+(bsize*6),c_gray,c_gray,c_gray,c_gray,false);
-		draw_set_alpha(1)
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*3),red_x2,_data.cont_y+(bsize*4),c_red,c_red,c_red,c_red,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*4),green_x2,_data.cont_y+(bsize*5),c_green,c_green,c_green,c_green,false);
-		draw_rectangle_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*5),blue_x2,_data.cont_y+(bsize*6),c_blue,c_blue,c_blue,c_blue,false);
-		draw_text_colour(_data.cont_x,_data.cont_y+pad,"Copy Values",c_green,c_green,c_green,c_green,1)
-		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+bsize,"Copy Code",c_green,c_green,c_green,c_green,1)
-		draw_text_colour(_data.cont_x+pad,_data.cont_y+pad+(bsize*2),"Delete",c_red,c_red,c_red,c_red,1)
-		}
-}
-
-function SpritesInterat(_data)
-{
-var handled = false;
-static pad = 2;
-static bsize = 25;
-var mx = device_mouse_x_to_gui(0);
-var my = device_mouse_y_to_gui(0);
-_data._color = make_color_rgb(_data.red,_data.green,_data.blue);
-var red_slider_x1 = _data.cont_x + pad;
-var red_slider_x2 = _data.cont_x + 100 - pad;
-var red_x2 = lerp(red_slider_x1, red_slider_x2, _data.red / 255);
-var green_slider_x1 = _data.cont_x + pad;
-var green_slider_x2 = _data.cont_x + 100 - pad;
-var green_x2 = lerp(green_slider_x1, green_slider_x2, _data.green / 255);
-var blue_slider_x1 = _data.cont_x + pad;
-var blue_slider_x2 = _data.cont_x + 100 - pad;
-var blue_x2  = lerp(blue_slider_x1, blue_slider_x2, _data.blue  / 255);
-var spriteW = sprite_get_width(_data.sprite)
-var spriteH = sprite_get_height(_data.sprite)
-
-		if (isInBox(_data.x1, _data.y1, _data.x1+spriteW, _data.y1+spriteH))
-		{
-		    if (mouse_check_button_pressed(mb_left))
-		    {
-				if (_data.context_open == false)
-				{
-		        _data.drag = 5;
-				_data.last_mx = mx;
-				_data.last_my = my;
-				handled = true;
-				}
-		    }
-
-
-if (mouse_check_button(mb_left))
-    {
-        switch (_data.drag)
-        {
-            case 1:
-                _data.y1 = my
-            break;
-            case 3:
-                _data.x1 = mx;
-            break;
-			case 5:
-				if (_data.context_open == true && handled == false){_data.context_open = false}
-	            var dx = mx - _data.last_mx;
-	            var dy = my - _data.last_my;
-
-	            _data.x1 += dx;
-	            _data.y1 += dy;
-
-	            _data.last_mx = mx;
-	            _data.last_my = my;
-			break;
-        }
-    }
-    else
-    {
-        _data.drag = 0;
-        window_set_cursor(cr_default);
-    }
-	}
-}
-
-function RTSprites(index,sub,x1,y1)
-{
-	draw_sprite(index,sub,x1,y1)
-}
+function RectanglesInteract(_data) { return GUIShapeInteract(_data); }
+function CirclesInteract(_data) { return GUIShapeInteract(_data); }
+function SpritesInterat(_data) { return GUIShapeInteract(_data); }
+function RectanglesDraw(_data) { GUIShapeDraw(_data); }
+function CirclesDraw(_data) { GUIShapeDraw(_data); }
+function SpritesDraw(_data) { GUIShapeDraw(_data); }
+function CreateRectangle(_data) { GUIShapeInteract(_data); GUIShapeDraw(_data); }
