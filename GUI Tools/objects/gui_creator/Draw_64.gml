@@ -31,6 +31,7 @@ if (guimode)
     }
     // Menus are drawn last and receive input first.
     if (!is_undefined(context_shape)) GUIContextDraw(context_shape);
+    if (sprite_picker.open) GUISpritePickerDraw(sprite_picker);
 }
 
 draw_set_color(saved_color);

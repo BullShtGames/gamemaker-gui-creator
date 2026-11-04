@@ -226,6 +226,141 @@ function GUIContextDraw(_data)
     }
 }
 
+/// Asset enumeration supports sparse IDs and refreshes on every open.
+function GUISpritePickerOpen(_picker)
+{
+    _picker.items = [];
+    var ids = asset_get_ids(asset_sprite);
+    for (var i = 0; i < array_length(ids); i++)
+        if (sprite_exists(ids[i])) array_push(_picker.items, ids[i]);
+    _picker.page = 0;
+    _picker.open = true;
+}
+
+/// Step and Draw share one layout, including after a GUI resize.
+function GUISpritePickerLayout(_picker)
+{
+    var width = max(1, min(720, display_get_gui_width() - 24));
+    var height = max(1, min(560, display_get_gui_height() - 24));
+    var columns = max(1, floor((width - 24) / 112));
+    var rows = max(1, floor((height - 96) / 112));
+    var capacity = columns * rows;
+    var pages = max(1, ceil(array_length(_picker.items) / capacity));
+    var px = (display_get_gui_width() - width) / 2;
+    var py = (display_get_gui_height() - height) / 2;
+    return {
+        x: px, y: py, width: width, height: height,
+        grid_x: px + 12, grid_y: py + 44,
+        columns: columns, rows: rows, capacity: capacity,
+        cell_width: max(1, (width - 24) / columns),
+        cell_height: max(1, (height - 96) / rows),
+        pages: pages, page: clamp(_picker.page, 0, pages - 1)
+    };
+}
+
+function GUISpritePickerCell(_layout)
+{
+    var column = floor((device_mouse_x_to_gui(0) - _layout.grid_x) / _layout.cell_width);
+    var row = floor((device_mouse_y_to_gui(0) - _layout.grid_y) / _layout.cell_height);
+    if (column < 0 || column >= _layout.columns || row < 0 || row >= _layout.rows) return -1;
+    return row * _layout.columns + column;
+}
+
+/// Return a selected asset once; all picker clicks are consumed by Step.
+function GUISpritePickerInteract(_picker)
+{
+    var layout = GUISpritePickerLayout(_picker);
+    _picker.page = layout.page;
+    if (keyboard_check_pressed(vk_escape))
+    {
+        _picker.open = false;
+        return undefined;
+    }
+    if (mouse_wheel_up()) _picker.page = max(0, _picker.page - 1);
+    if (mouse_wheel_down()) _picker.page = min(layout.pages - 1, _picker.page + 1);
+    if (!mouse_check_button_pressed(mb_left)) return undefined;
+
+    var px = layout.x;
+    var py = layout.y;
+    var right = px + layout.width;
+    var bottom = py + layout.height;
+    if (!isInBox(px, py, right, bottom) || isInBox(right - 36, py + 8, right - 8, py + 36))
+    {
+        _picker.open = false;
+        return undefined;
+    }
+    if (isInBox(px + 12, bottom - 36, px + 82, bottom - 8))
+    {
+        _picker.page = max(0, _picker.page - 1);
+        return undefined;
+    }
+    if (isInBox(right - 82, bottom - 36, right - 12, bottom - 8))
+    {
+        _picker.page = min(layout.pages - 1, _picker.page + 1);
+        return undefined;
+    }
+    var cell = GUISpritePickerCell(layout);
+    var index = _picker.page * layout.capacity + cell;
+    if (cell >= 0 && index < array_length(_picker.items))
+    {
+        var selected = _picker.items[index];
+        if (sprite_exists(selected))
+        {
+            _picker.open = false;
+            return selected;
+        }
+    }
+    return undefined;
+}
+
+function GUISpritePickerDraw(_picker)
+{
+    var layout = GUISpritePickerLayout(_picker);
+    var px = layout.x;
+    var py = layout.y;
+    var right = px + layout.width;
+    var bottom = py + layout.height;
+    draw_set_color(c_black);
+    draw_set_alpha(0.65);
+    draw_rectangle(0, 0, display_get_gui_width(), display_get_gui_height(), false);
+    draw_set_alpha(1);
+    draw_set_color(make_color_rgb(32, 32, 32));
+    draw_rectangle(px, py, right, bottom, false);
+    draw_set_color(c_white);
+    draw_text(px + 12, py + 10, "Choose a sprite");
+    draw_text(right - 28, py + 10, "X");
+
+    var hovered = GUISpritePickerCell(layout);
+    var start = layout.page * layout.capacity;
+    for (var cell = 0; cell < layout.capacity && start + cell < array_length(_picker.items); cell++)
+    {
+        var sprite = _picker.items[start + cell];
+        if (!sprite_exists(sprite)) continue;
+        var cx = layout.grid_x + (cell mod layout.columns) * layout.cell_width;
+        var cy = layout.grid_y + floor(cell / layout.columns) * layout.cell_height;
+        draw_set_color(c_gray);
+        if (cell == hovered) draw_set_color(c_green);
+        draw_rectangle(cx + 2, cy + 2, cx + layout.cell_width - 2, cy + layout.cell_height - 2, false);
+        var sw = max(1, sprite_get_width(sprite));
+        var sh = max(1, sprite_get_height(sprite));
+        var scale = min(1, max(1, layout.cell_width - 16) / sw, max(1, layout.cell_height - 36) / sh);
+        var sx = cx + (layout.cell_width - sw * scale) / 2 + sprite_get_xoffset(sprite) * scale;
+        var sy = cy + 8 + (max(1, layout.cell_height - 36) - sh * scale) / 2 + sprite_get_yoffset(sprite) * scale;
+        draw_sprite_ext(sprite, 0, sx, sy, scale, scale, 0, c_white, 1);
+        draw_set_color(c_white);
+        var label = sprite_get_name(sprite);
+        var text_scale = min(1, max(1, layout.cell_width - 12) / max(1, string_width(label)));
+        draw_text_transformed(cx + 6, cy + layout.cell_height - 24, label, text_scale, text_scale, 0);
+    }
+    draw_set_color(c_white);
+    if (array_length(_picker.items) == 0) draw_text(layout.grid_x, layout.grid_y, "No sprites found.");
+    if (layout.page > 0) draw_text(px + 12, bottom - 32, "Prev");
+    if (layout.page < layout.pages - 1) draw_text(right - 82, bottom - 32, "Next");
+    draw_set_halign(fa_center);
+    draw_text(px + layout.width / 2, bottom - 32, string(layout.page + 1) + " / " + string(layout.pages));
+    draw_set_halign(fa_left);
+}
+
 function RectanglesInteract(_data) { return GUIShapeInteract(_data); }
 function CirclesInteract(_data) { return GUIShapeInteract(_data); }
 function SpritesInterat(_data) { return GUIShapeInteract(_data); }
